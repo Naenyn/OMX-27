@@ -1197,7 +1197,9 @@ void OmxDisp::dispMode()
     {
         displaymode = modes[sysSettings.omxMode]; // display.print(modes[mode]);
     }
-    u8g2centerText(displaymode, 86, 20, 44, 32);
+    // u8g2centerText(displaymode, 86, 20, 44, 32);
+    u8g2centerText(displaymode, 0, 0, 128, 64);
+    setDirty();
 }
 
 void OmxDisp::setDirty()
