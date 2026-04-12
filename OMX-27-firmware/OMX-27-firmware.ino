@@ -701,7 +701,15 @@ void loop()
 	//
 	//	Serial.println(screenSaverCounter);
 	omxScreensaver.updateScreenSaverState();
-	sysSettings.screenSaverMode = omxScreensaver.shouldShowScreenSaver();
+	{
+		static bool wasScreenSaverMode = false;
+		sysSettings.screenSaverMode = omxScreensaver.shouldShowScreenSaver();
+		if (wasScreenSaverMode && !sysSettings.screenSaverMode)
+		{
+			omxScreensaver.clearGameStateOnSaverExit();
+		}
+		wasScreenSaverMode = sysSettings.screenSaverMode;
+	}
 
 	// ############### POTS ###############
 	//

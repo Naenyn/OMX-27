@@ -35,6 +35,22 @@ void OmxScreensaver::toggleGame()
     }
 }
 
+void OmxScreensaver::clearGameStateOnSaverExit()
+{
+	if (!gameActive_)
+		return;
+	gameActive_ = false;
+	gameResetRound();
+	losePulseCount_ = 0;
+	hitObstacleIndex_ = -1;
+	gameStarted_ = false;
+	auxWasHeldLastTick_ = false;
+	playerDodging_ = false;
+	gameSpeedMs_ = 400;
+	obstacleSpawnIntervalMs_ = 1200;
+	nextStepTimeSS = millis();
+}
+
 uint32_t OmxScreensaver::gameRandomBrightColor()
 {
     return kObstacleColors[random(0, kNumObstacleColors)];

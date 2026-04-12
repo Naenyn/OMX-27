@@ -43,6 +43,9 @@ public:
 	// Easter egg game (when in screensaver, encoder click toggles)
 	void toggleGame();
 	bool isGameActive() const { return gameActive_; }
+	// Call when leaving screensaver so the next idle period starts in normal saver, not mid-game.
+	// Easter egg score is kept until power-off (RAM); not cleared here.
+	void clearGameStateOnSaverExit();
 
 private:
 	void setScreenSaverColor();
