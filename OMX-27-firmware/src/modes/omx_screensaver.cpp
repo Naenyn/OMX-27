@@ -11,10 +11,29 @@
 static const uint32_t kObstacleColors[] = {RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN, ORANGE, LIME};
 static const int kNumObstacleColors = sizeof(kObstacleColors) / sizeof(kObstacleColors[0]);
 
+// Full-wheel hues 1..kFullWheelHueTop; hue 0 = all LEDs off. Raw ADC rarely hits potMinVal exactly at CCW,
+// so the bottom ~1/256 of constrained travel maps to off (same idea as using the low 7-bit step as "0").
+static const long kFullWheelHueTop = 65527;
+
 void OmxScreensaver::setScreenSaverColor()
 {
-	int tempcolor = potSettings.analog[4]->getValue();
-	colorConfig.screensaverColor = map(tempcolor, potMinVal, potMaxVal, 0, (long)ssMaxColorDepth);
+	int raw = constrain(potSettings.analog[4]->getValue(), potMinVal, potMaxVal);
+	long span = (long)potMaxVal - (long)potMinVal;
+	if (span <= 0)
+	{
+		colorConfig.screensaverColor = 0;
+		return;
+	}
+	long pos = (long)raw - (long)potMinVal; // 0 .. span
+	const long offSlice = max(1L, span / 256);
+	if (pos <= offSlice)
+	{
+		colorConfig.screensaverColor = 0;
+	}
+	else
+	{
+		colorConfig.screensaverColor = (uint32_t)map(pos, offSlice + 1, span, 1L, kFullWheelHueTop);
+	}
 }
 
 void OmxScreensaver::toggleGame()
@@ -364,19 +383,37 @@ void OmxScreensaver::gameDrawLEDs()
 
 void OmxScreensaver::onPotChanged(int potIndex, int prevValue, int newValue, int analogDelta)
 {
-	if (potSettings.analog[4]->hasChanged())
+	if (potIndex == 4)
 	{
 		setScreenSaverColor();
 	}
-	if (potSettings.analog[0]->hasChanged() || potSettings.analog[1]->hasChanged() || potSettings.analog[2]->hasChanged() ||
-		potSettings.analog[3]->hasChanged() || potSettings.analog[4]->hasChanged())
+	// Knob 5 adjusting hue must not reset idle (exits saver). Knobs 1–4 still wake.
+	if (potIndex < 4)
 	{
 		screenSaverCounter = 0;
 	}
 }
 
+void OmxScreensaver::requestImmediateStart()
+{
+	pendingImmediateStart_ = true;
+}
+
 void OmxScreensaver::updateScreenSaverState()
 {
+	if (pendingImmediateStart_)
+	{
+		pendingImmediateStart_ = false;
+		screenSaverCounter = screensaverInterval + 1;
+		if (!screenSaverActive)
+		{
+			screenSaverActive = true;
+			setScreenSaverColor();
+		}
+		nextStepTimeSS = millis();
+		return;
+	}
+
 	if (screenSaverCounter > screensaverInterval)
 	{
 		if (!screenSaverActive)
@@ -435,12 +472,9 @@ void OmxScreensaver::updateLEDs()
 		{
 			strip.setPixelColor(z, 0, 0, 0);
 		}
-		if (colorConfig.screensaverColor < ssMaxColorDepth)
+		// Hue 0 = knob 5 fully CCW (all off). Any nonzero hue runs the main-style animation (no main 65200 dim band).
+		if (colorConfig.screensaverColor != 0)
 		{
-			if (colorConfig.screensaverColor > 65200)
-			{
-				brightness = 0;
-			}
 			if (!ssreverse)
 			{
 				for (int x = 0; x < 16; x++)

@@ -279,12 +279,32 @@ void readPotentimeters()
 
 		if (potSettings.analog[k]->hasChanged())
 		{
-			// do stuff
 			if (sysSettings.screenSaverMode)
 			{
-				omxScreensaver.onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
+				// Easter-egg game: unchanged — all pots go to screensaver handler.
+				if (omxScreensaver.isGameActive())
+				{
+					omxScreensaver.onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
+				}
+				else
+				{
+					// Normal saver: knob 5 only adjusts hue while AUX is held; otherwise wake + CC like enhancements.
+					const int knob5Index = 4;
+					if (k == knob5Index && midiSettings.keyState[0])
+					{
+						omxScreensaver.onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
+					}
+					else if (k == knob5Index)
+					{
+						omxScreensaver.resetCounter();
+						activeOmxMode->onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
+					}
+					else
+					{
+						omxScreensaver.onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
+					}
+				}
 			}
-			// don't send pots in screensaver
 			else
 			{
 				activeOmxMode->onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);

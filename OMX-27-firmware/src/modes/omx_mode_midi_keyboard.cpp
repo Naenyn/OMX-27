@@ -522,6 +522,13 @@ void OmxModeMidiKeyboard::onEncoderButtonDown()
 		return;
 	}
 
+	if (!encoderConfig.enc_edit && params.getSelPage() == MIPAGE_VERSION)
+	{
+		omxScreensaver.requestImmediateStart();
+		omxDisp.setDirty();
+		return;
+	}
+
 	if(params.getSelPage() == MIPAGE_CFG)
 	{
 		int8_t selParam = params.getSelParam();

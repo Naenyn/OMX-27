@@ -30,6 +30,9 @@ public:
 	void updateScreenSaverState();
 	bool shouldShowScreenSaver();
 
+	/** Next updateScreenSaverState() will enter screensaver immediately (e.g. Keys UI version page + encoder click). */
+	void requestImmediateStart();
+
 	void onEncoderChanged(Encoder::Update enc) override;
 
 	void onEncoderButtonDown() override{};
@@ -60,8 +63,7 @@ private:
 	int sleepTick = 80;
 
 	bool screenSaverActive = false;
-
-	uint32_t ssMaxColorDepth = 65528; // used by setScreenSaverColor()
+	bool pendingImmediateStart_ = false;
 
 	// Game state
 	bool gameActive_ = false;
