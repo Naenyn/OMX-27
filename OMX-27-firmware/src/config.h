@@ -16,16 +16,16 @@
 // #include <cstdarg>
 
 /* * firmware metadata  */
-// OMX_VERSION = 1.14.1
+// OMX_VERSION = 1.15.0
 const int MAJOR_VERSION = 1;
-const int MINOR_VERSION = 14;
-const int POINT_VERSION = 1;
+const int MINOR_VERSION = 15;
+const int POINT_VERSION = 0;
 
 // 1.13.2 - Adds CV Trigger modes for legato and regtrig
 // 1.13.3 - Bugfix for CV Trigger modes
 // 1.13.8 - option to send midi all the time or not
 // 1.14.0 - finish RP2040 port
-// 1.15.0 - mode-select display labels
+// 1.15.0 - AUX pot-bank on keys 13/14; mode-select labels
 
 const int DEVICE_ID = 2;
 
