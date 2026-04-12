@@ -1377,16 +1377,13 @@ void OmxDisp::dispMode()
 	if (isDirty())
 	{
 		const char *displaymode = "";
-		OMXMode modeForLabel = sysSettings.omxMode;
 		if (sysSettings.newmode != sysSettings.omxMode && encoderConfig.enc_edit)
 		{
 			displaymode = modes[sysSettings.newmode];
-			modeForLabel = sysSettings.newmode;
 		}
 		else if (encoderConfig.enc_edit)
 		{
 			displaymode = modes[sysSettings.omxMode];
-			modeForLabel = sysSettings.omxMode;
 		}
 
 		const int16_t marginL = 2;
@@ -1395,13 +1392,11 @@ void OmxDisp::dispMode()
 		u8g2_display.setFontMode(1);
 		u8g2_display.setForegroundColor(WHITE);
 		u8g2_display.setBackgroundColor(BLACK);
-		const bool seqSmallerFont = (modeForLabel == MODE_S1 || modeForLabel == MODE_S2);
-		u8g2_display.setFont(seqSmallerFont ? FONT_MODE_SEQ_NAMES : FONT_BIG);
+		u8g2_display.setFont(FONT_BIG);
 		u8g2_display.setCursor(0, 0);
 		// Same vertical math as u8g2centerText (baseline = boxY + (h - ascent) / 2). Do not use boxMid from
 		// boxY=20,h=32 as "screen center" — that targets y≈36, below the 32px-tall panel and clips text.
-		// Slightly raise the box for StepSeq 1/2 (smaller ascent) so it lines up with FONT_BIG modes.
-		const int16_t labelBoxY = seqSmallerFont ? 17 : 20;
+		const int16_t labelBoxY = 20;
 		u8g2centerText(displaymode, marginL, labelBoxY, labelW, 32);
 
 		// Top-right overlay: U8g2 cursor Y is the baseline, so u8g2centerText(..., y=0, h=15) put the
