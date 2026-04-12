@@ -10,6 +10,7 @@
 #include "../utils/music_scales.h"
 #include "../midi/noteoffs.h"
 #include "sequencer.h"
+#include "omx_screensaver.h"
 
 // const int kSelMidiFXOffColor = SALMON;
 // const int kMidiFXOffColor = RED;
@@ -37,7 +38,7 @@ OmxModeMidiKeyboard::OmxModeMidiKeyboard()
 	params.addPage(4); // PotBank, Thru, Macro, Macro Channel
 	params.addPage(4); // Root, Scale, Lock Scale Notes, Group notes. 
 	params.addPage(4); // Pot CC CFG
-	params.addPage(4); // MIPAGE_CLOCK_SOURCE
+	params.addPage(4); // MIPAGE_CLOCK_SOURCE (CLKS, SEND, [empty], SS)
 	params.addPage(4); // MIPAGE_VERSION
 
 	// subModeMidiFx.setNoteOutputFunc(&OmxModeMidiKeyboard::onNotePostFXForwarder, this);
@@ -483,9 +484,18 @@ void OmxModeMidiKeyboard::onEncoderChanged(Encoder::Update enc)
 		{
 			sequencer.clockSource = constrain(sequencer.clockSource + amt, 0, 1);
 		}
-		if (selParam == 2)
+		else if (selParam == 2)
 		{
 			clockConfig.send_always = constrain(clockConfig.send_always + amt, 0, 1);
+		}
+		else if (selParam == 4)
+		{
+			int m = constrain((int)sysSettings.screensaverMinutes + amt, 1, 60);
+			if (m != (int)sysSettings.screensaverMinutes)
+			{
+				sysSettings.screensaverMinutes = (uint8_t)m;
+				omxScreensaver.setIntervalMinutes(sysSettings.screensaverMinutes);
+			}
 		}
 	}
 
@@ -1243,6 +1253,8 @@ void OmxModeMidiKeyboard::onDisplayUpdate()
 
 					omxDisp.setLegend(0,"CLKS", sequencer.clockSource ? "Ext" : "Int");
 					omxDisp.setLegend(1,"SEND", clockConfig.send_always ? "ON" : "OFF"); // Always send clock or not
+					omxDisp.setLegend(2, "", "");
+					omxDisp.setLegend(3, "SS", (int)sysSettings.screensaverMinutes);
 				}
 
 				omxDisp.dispGenericMode2(params.getNumPages(), params.getSelPage(), params.getSelParam(), encoderSelect && !midiSettings.midiAUX);

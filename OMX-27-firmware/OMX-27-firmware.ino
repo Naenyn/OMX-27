@@ -1,6 +1,6 @@
 // OMX-27 MIDI KEYBOARD / SEQUENCER
 
-//	v1.14.1
+//	v1.15.0
 //	Last update: April 2026
 //
 //	Original concept and initial code by Steven Noreyko
@@ -346,7 +346,9 @@ void saveHeader()
 
 	storage->write(EEPROM_HEADER_ADDRESS + 38, potSettings.potbank);
 
-	// 38 bytes
+	storage->write(EEPROM_HEADER_ADDRESS + 39, sysSettings.screensaverMinutes);
+
+	// 40 bytes (see EEPROM_HEADER_SIZE)
 }
 
 // returns true if the header contained initialized data
@@ -419,6 +421,18 @@ bool loadHeader(void)
 	cvNoteUtil.triggerMode = constrain(storage->read(EEPROM_HEADER_ADDRESS + 37), 0, 1);
 
 	potSettings.potbank = constrain(storage->read(EEPROM_HEADER_ADDRESS + 38), 0, NUM_CC_BANKS-1);
+
+	{
+		uint8_t ssmin = storage->read(EEPROM_HEADER_ADDRESS + 39);
+		if (ssmin == 0xFF || ssmin < 1 || ssmin > 60)
+		{
+			sysSettings.screensaverMinutes = 3;
+		}
+		else
+		{
+			sysSettings.screensaverMinutes = ssmin;
+		}
+	}
 
 	// digitalWrite(BLUELED, HIGH);
 	return true;
@@ -716,7 +730,10 @@ void loop()
 	if (u.active())
 	{
 		auto amt = u.accel(1);		   // where 5 is the acceleration factor if you want it, 0 if you don't)
-		omxScreensaver.resetCounter(); // screenSaverCounter = 0;
+		if (!sysSettings.screenSaverMode)
+		{
+			omxScreensaver.resetCounter();
+		}
 									   //    	Serial.println(u.dir() < 0 ? "ccw " : "cw ");
 									   //    	Serial.println(amt);
 
@@ -731,9 +748,13 @@ void loop()
 			omxDisp.setDirty();
 			omxLeds.setDirty();
 		}
-		else
+		else if (!sysSettings.screenSaverMode)
 		{
 			activeOmxMode->onEncoderChanged(u);
+		}
+		else
+		{
+			omxScreensaver.onEncoderChanged(u);
 		}
 	}
 	// END ENCODER
@@ -744,8 +765,14 @@ void loop()
 	switch (s)
 	{
 	// SHORT PRESS
-	case Button::Down:				   // Serial.println("Button down");
-		omxScreensaver.resetCounter(); // screenSaverCounter = 0;
+	case Button::Down: // Serial.println("Button down");
+		if (sysSettings.screenSaverMode && !encoderConfig.enc_edit)
+		{
+			omxScreensaver.toggleGame();
+			omxDisp.setDirty();
+			break;
+		}
+		omxScreensaver.resetCounter();
 
 		// what page are we on?
 		if (sysSettings.newmode != sysSettings.omxMode && encoderConfig.enc_edit)
@@ -814,7 +841,15 @@ void loop()
 
 		if (e.down())
 		{
-			omxScreensaver.resetCounter(); // screenSaverCounter = 0;
+			// AUX alone does not wake the idle saver; keys during the easter-egg game must not
+			// reset the counter (that exits screensaver and kills the game).
+			const bool auxAloneNoWake =
+				sysSettings.screenSaverMode && thisKey == 0 && !omxScreensaver.isGameActive();
+			const bool gameKeysNoWake = sysSettings.screenSaverMode && omxScreensaver.isGameActive();
+			if (!auxAloneNoWake && !gameKeysNoWake)
+			{
+				omxScreensaver.resetCounter();
+			}
 			midiSettings.keyState[thisKey] = true;
 		}
 
@@ -1088,6 +1123,7 @@ void setup()
 
 		// Failed to load due to initialized EEPROM or version mismatch
 		// defaults
+		sysSettings.screensaverMinutes = 3;
 		sequencer.playingPattern = 0;
 		sysSettings.playingPattern = 0;
 		sysSettings.midiChannel = 1;
@@ -1104,6 +1140,7 @@ void setup()
 		saveToStorage();
 	}
 
+	omxScreensaver.setIntervalMinutes(sysSettings.screensaverMinutes);
 
 #ifdef RAM_MONITOR
 	reporttime = millis();
