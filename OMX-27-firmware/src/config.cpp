@@ -83,7 +83,7 @@ const char *exitMsg = "Exit";
 const char *paramOffMsg = "OFF";
 const char *paramOnMsg = "ON";
 
-const char *modes[] = {"MI", "DRUM", "CH", "S1", "S2", "GR", "EL", "OM"};
+const char *modes[] = {"Keys", "Drums", "Chords", "StepSeq 1", "StepSeq 2", "Grids", "Euclidean", "Organelle"};
 const char *macromodes[] = {"Off", "M8", "NRN", "DEL"};
 const int nummacromodes = 3;
 

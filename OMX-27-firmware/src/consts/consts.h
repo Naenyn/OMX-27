@@ -93,4 +93,6 @@ const uint8_t cvHightestNote = cvLowestNote + int(fullRangeV * 12) - 1;
 #define FONT_SYMB_BIG u8g2_font_cu12_h_symbols
 #define FONT_TENFAT u8g2_font_tenfatguys_tf
 #define FONT_BIG u8g2_font_helvB18_tr
+// Bundled U8g2 jumps helvB14 -> helvB18 (no 15/16); 18 matches FONT_BIG and is too wide for StepSeq labels.
+#define FONT_MODE_SEQ_NAMES u8g2_font_helvB14_tr
 #define FONT_CHAR16 u8g2_font_6x12_tf
