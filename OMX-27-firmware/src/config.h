@@ -29,6 +29,7 @@ const int POINT_VERSION = 0;
 // 1.13.3 - Bugfix for CV Trigger modes
 // 1.13.8 - option to send midi all the time or not
 // 1.14.0 - finish RP2040 port
+// 1.15.0 - AUX transport (keys 16–18), Pot Config CCs, EEPROM v39
 
 const int DEVICE_ID = 2;
 
@@ -177,6 +178,10 @@ struct MidiConfig
 	bool midiSoftThru = false;
 	bool midiAUX = false;
 	bool isBankSelect = false;
+
+	// AUX transport (keys 16–18): configurable CCs; Stop = momentary, Play/Rec = toggles (879eccc semantics).
+	uint8_t transportCC[3] = {102, 103, 104};
+	bool transportToggle[3] = {false, false, false};
 };
 
 extern MidiConfig midiSettings;

@@ -700,6 +700,24 @@ void OmxModeMidiKeyboard::onKeyUpdate(OMXKeypadEvent e)
 					potBankAuxTriggerFlash((uint8_t)b);
 					MM::sendControlChange(90, potSettings.potbank, sysSettings.midiChannel);
 				}
+				else if (thisKey >= 16 && thisKey <= 18) // Transport: 16=Stop (momentary), 17/18=Play/Rec (toggle)
+				{
+					int transportIndex = thisKey - 16;
+					uint8_t cc = (uint8_t)constrain(midiSettings.transportCC[transportIndex], 0, 127);
+					uint8_t val;
+					if (transportIndex == 0)
+					{
+						val = 127;
+						midiSettings.transportToggle[1] = false;
+					}
+					else
+					{
+						bool newState = !midiSettings.transportToggle[transportIndex];
+						midiSettings.transportToggle[transportIndex] = newState;
+						val = newState ? 127 : 0;
+					}
+					MM::sendControlChange(cc, val, sysSettings.midiChannel);
+				}
 				else if (!mfxQuickEdit_ && (thisKey == 1 || thisKey == 2)) // Change Param selection
 				{
 					if (thisKey == 1)
@@ -786,7 +804,15 @@ void OmxModeMidiKeyboard::onKeyUpdate(OMXKeypadEvent e)
 		}
 		else if (!e.down() && thisKey != 0)
 		{
-			doNoteOff(thisKey);
+			if (midiSettings.midiAUX && thisKey == 16)
+			{
+				uint8_t cc = (uint8_t)constrain(midiSettings.transportCC[0], 0, 127);
+				MM::sendControlChange(cc, 0, sysSettings.midiChannel);
+			}
+			if (!(midiSettings.midiAUX && thisKey >= 16 && thisKey <= 18))
+			{
+				doNoteOff(thisKey);
+			}
 			// omxUtil.midiNoteOff(thisKey, sysSettings.midiChannel);
 		}
 	}
@@ -834,6 +860,9 @@ void OmxModeMidiKeyboard::onKeyUpdate(OMXKeypadEvent e)
 		strip.setPixelColor(12, LEDOFF);
 		strip.setPixelColor(13, LEDOFF);
 		strip.setPixelColor(14, LEDOFF);
+		strip.setPixelColor(16, LEDOFF);
+		strip.setPixelColor(17, LEDOFF);
+		strip.setPixelColor(18, LEDOFF);
 	}
 
 	omxLeds.setDirty();
@@ -1153,6 +1182,9 @@ void OmxModeMidiKeyboard::updateLEDs()
 				strip.setPixelColor(14, c14);
 			}
 		}
+		strip.setPixelColor(16, midiSettings.keyState[16] ? WHITE : TRANSPORT_DIM_WHITE);
+		strip.setPixelColor(17, midiSettings.transportToggle[1] ? GREEN : TRANSPORT_DIM_GREEN);
+		strip.setPixelColor(18, midiSettings.transportToggle[2] ? RED : TRANSPORT_DIM_RED);
 
 		// strip.setPixelColor(10, color3); // MidiFX key
 
