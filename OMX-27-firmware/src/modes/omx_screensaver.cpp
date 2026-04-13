@@ -15,9 +15,9 @@ static const int kNumObstacleColors = sizeof(kObstacleColors) / sizeof(kObstacle
 // so the bottom ~1/256 of constrained travel maps to off (same idea as using the low 7-bit step as "0").
 static const long kFullWheelHueTop = 65527;
 // Hue delta per encoder "unit". `Encoder::accel(rate)` scales with spin speed (dir + dir*speedup*rate).
-// Larger `rate` + step = pot-like sweep without endless turning.
-static const long kEncoderHueStep = 2200;
-static const int kEncoderHueAccelRate = 5;
+// Midpoint between first encoder mapping (350 / rate 1) and faster pass (2200 / rate 5).
+static const long kEncoderHueStep = 1275;
+static const int kEncoderHueAccelRate = 3;
 
 void OmxScreensaver::setScreenSaverColor()
 {
