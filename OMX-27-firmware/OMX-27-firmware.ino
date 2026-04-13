@@ -281,29 +281,7 @@ void readPotentimeters()
 		{
 			if (sysSettings.screenSaverMode)
 			{
-				// Easter-egg game: unchanged — all pots go to screensaver handler.
-				if (omxScreensaver.isGameActive())
-				{
-					omxScreensaver.onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
-				}
-				else
-				{
-					// Normal saver: knob 5 only adjusts hue while AUX is held; otherwise wake + CC like enhancements.
-					const int knob5Index = 4;
-					if (k == knob5Index && midiSettings.keyState[0])
-					{
-						omxScreensaver.onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
-					}
-					else if (k == knob5Index)
-					{
-						omxScreensaver.resetCounter();
-						activeOmxMode->onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
-					}
-					else
-					{
-						omxScreensaver.onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
-					}
-				}
+				omxScreensaver.onPotChanged(k, prevValue, potSettings.analogValues[k], analogDelta);
 			}
 			else
 			{
@@ -312,6 +290,7 @@ void readPotentimeters()
 		}
 
 	}
+
 }
 // ####### END POTENTIOMETERS #######
 
@@ -731,6 +710,61 @@ void loop()
 		wasScreenSaverMode = sysSettings.screenSaverMode;
 	}
 
+	// ############### KEY HANDLING ###############
+	// Before pots: keypad + midiSettings.keyState match ADC reads the same frame.
+	while (keypad.available())
+	{
+		auto e = keypad.next();
+		int thisKey = e.key();
+		bool keyConsumed = false;
+
+		if (e.down())
+		{
+			// AUX alone does not wake the idle saver; keys during the easter-egg game must not
+			// reset the counter (that exits screensaver and kills the game).
+			const bool auxAloneNoWake =
+				sysSettings.screenSaverMode && thisKey == 0 && !omxScreensaver.isGameActive();
+			const bool gameKeysNoWake = sysSettings.screenSaverMode && omxScreensaver.isGameActive();
+			if (!auxAloneNoWake && !gameKeysNoWake)
+			{
+				omxScreensaver.resetCounter();
+			}
+			midiSettings.keyState[thisKey] = true;
+		}
+
+		if (e.down() && thisKey == 0 && encoderConfig.enc_edit)
+		{
+			// temp - save whenever the 0 key is pressed in encoder edit mode
+			omxDisp.displayMessage("Saving...");
+			omxDisp.isDirty();
+			omxDisp.showDisplay();
+			saveToStorage();
+			//	Serial.println("EEPROM saved");
+			omxDisp.displayMessage("Saved State");
+			encoderConfig.enc_edit = false;
+			omxLeds.setAllLEDS(0, 0, 0);
+			activeOmxMode->onModeActivated();
+			omxDisp.isDirty();
+			omxLeds.isDirty();
+			keyConsumed = true;
+		}
+
+		if (!keyConsumed)
+		{
+			activeOmxMode->onKeyUpdate(e);
+		}
+
+		if (!e.down())
+		{
+			midiSettings.keyState[thisKey] = false;
+		}
+
+		if (e.held() && !keyConsumed)
+		{
+			activeOmxMode->onKeyHeldUpdate(e);
+		}
+	}
+
 	// ############### POTS ###############
 	//
 	readPotentimeters();
@@ -855,69 +889,6 @@ void loop()
 		break;
 	}
 	// END ENCODER BUTTON
-
-	// ############### KEY HANDLING ###############
-	//
-	while (keypad.available())
-	{
-// 		Serial.println("keypad");
-		auto e = keypad.next();
-		int thisKey = e.key();
-		bool keyConsumed = false;
-		// int keyPos = thisKey - 11;
-		// int seqKey = keyPos + (sequencer.patternPage[sequencer.playingPattern] * NUM_STEPKEYS);
-
-		if (e.down())
-		{
-			// AUX alone does not wake the idle saver; keys during the easter-egg game must not
-			// reset the counter (that exits screensaver and kills the game).
-			const bool auxAloneNoWake =
-				sysSettings.screenSaverMode && thisKey == 0 && !omxScreensaver.isGameActive();
-			const bool gameKeysNoWake = sysSettings.screenSaverMode && omxScreensaver.isGameActive();
-			if (!auxAloneNoWake && !gameKeysNoWake)
-			{
-				omxScreensaver.resetCounter();
-			}
-			midiSettings.keyState[thisKey] = true;
-		}
-
-		if (e.down() && thisKey == 0 && encoderConfig.enc_edit)
-		{
-			// temp - save whenever the 0 key is pressed in encoder edit mode
-			omxDisp.displayMessage("Saving...");
-			omxDisp.isDirty();
-			omxDisp.showDisplay();
-			saveToStorage();
-			//	Serial.println("EEPROM saved");
-			omxDisp.displayMessage("Saved State");
-			encoderConfig.enc_edit = false;
-			omxLeds.setAllLEDS(0, 0, 0);
-			activeOmxMode->onModeActivated();
-			omxDisp.isDirty();
-			omxLeds.isDirty();
-			keyConsumed = true;
-		}
-
-		if (!keyConsumed)
-		{
-			activeOmxMode->onKeyUpdate(e);
-		}
-
-		// END MODE SWITCH
-
-		if (!e.down())
-		{
-			midiSettings.keyState[thisKey] = false;
-		}
-
-		// ### LONG KEY SWITCH PRESS
-		if (e.held() && !keyConsumed)
-		{
-			// DO LONG PRESS THINGS
-			activeOmxMode->onKeyHeldUpdate(e); // Only the sequencer uses this, could probably be handled in onKeyUpdate() but keyStates are modified before this stuff happens.
-		}									   // END IF HELD
-
-	} // END KEYS WHILE
 
 	if (!sysSettings.screenSaverMode)
 	{

@@ -14,6 +14,10 @@ static const int kNumObstacleColors = sizeof(kObstacleColors) / sizeof(kObstacle
 // Full-wheel hues 1..kFullWheelHueTop; hue 0 = all LEDs off. Raw ADC rarely hits potMinVal exactly at CCW,
 // so the bottom ~1/256 of constrained travel maps to off (same idea as using the low 7-bit step as "0").
 static const long kFullWheelHueTop = 65527;
+// Hue delta per encoder "unit". `Encoder::accel(rate)` scales with spin speed (dir + dir*speedup*rate).
+// Larger `rate` + step = pot-like sweep without endless turning.
+static const long kEncoderHueStep = 2200;
+static const int kEncoderHueAccelRate = 5;
 
 void OmxScreensaver::setScreenSaverColor()
 {
@@ -383,12 +387,9 @@ void OmxScreensaver::gameDrawLEDs()
 
 void OmxScreensaver::onPotChanged(int potIndex, int prevValue, int newValue, int analogDelta)
 {
-	if (potIndex == 4)
-	{
-		setScreenSaverColor();
-	}
-	// Knob 5 adjusting hue must not reset idle (exits saver). Knobs 1–4 still wake.
-	if (potIndex < 4)
+	// Hue while saving: encoder (onEncoderChanged). Initial hue from knob 5 at saver entry (setScreenSaverColor).
+	// Physical knobs 1–5: clear idle to wake — not while AUX is held (grip / mux bleed).
+	if (potIndex < potCount && !midiSettings.keyState[0])
 	{
 		screenSaverCounter = 0;
 	}
@@ -441,8 +442,25 @@ bool OmxScreensaver::shouldShowScreenSaver()
     return screenSaverActive;
 }
 
-void OmxScreensaver::onEncoderChanged(Encoder::Update enc) {
+void OmxScreensaver::onEncoderChanged(Encoder::Update enc)
+{
+	if (gameActive_)
+		return;
 
+	const int amt = enc.accel(kEncoderHueAccelRate);
+	if (amt == 0)
+		return;
+
+	// Stay in screensaver: do not touch screenSaverCounter.
+	long h = (long)colorConfig.screensaverColor;
+	h += (long)amt * kEncoderHueStep;
+	if (h < 0)
+		h = 0;
+	else if (h > kFullWheelHueTop)
+		h = kFullWheelHueTop;
+
+	colorConfig.screensaverColor = (uint32_t)h;
+	omxLeds.setDirty();
 }
 
 void OmxScreensaver::onKeyUpdate(OMXKeypadEvent e)
@@ -472,7 +490,7 @@ void OmxScreensaver::updateLEDs()
 		{
 			strip.setPixelColor(z, 0, 0, 0);
 		}
-		// Hue 0 = knob 5 fully CCW (all off). Any nonzero hue runs the main-style animation (no main 65200 dim band).
+		// Hue 0 = all off (initial CCW slice from knob 5 at saver entry). Nonzero: main-style animation.
 		if (colorConfig.screensaverColor != 0)
 		{
 			if (!ssreverse)
