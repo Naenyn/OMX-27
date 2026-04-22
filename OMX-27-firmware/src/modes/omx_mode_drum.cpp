@@ -7,6 +7,7 @@
 #include "../hardware/omx_disp.h"
 #include "../hardware/omx_leds.h"
 #include "../midi/midi.h"
+#include "../utils/pot_bank_aux.h"
 #include "../utils/music_scales.h"
 #include "../midi/noteoffs.h"
 
@@ -593,6 +594,22 @@ void OmxModeDrum::onKeyUpdate(OMXKeypadEvent e)
 
 					omxDisp.displayMessage("Loaded " + String(newKitIndex + 1));
 				}
+				else if (thisKey == 13 || thisKey == 14)
+				{
+					const int n = NUM_CC_BANKS;
+					int b = potSettings.potbank;
+					if (thisKey == 13)
+					{
+						b = (b + n - 1) % n;
+					}
+					else
+					{
+						b = (b + 1) % n;
+					}
+					potSettings.potbank = b;
+					potBankAuxTriggerFlash((uint8_t)b);
+					MM::sendControlChange(90, potSettings.potbank, sysSettings.midiChannel);
+				}
 			}
 
 			if (!keyConsumed)
@@ -619,6 +636,7 @@ void OmxModeDrum::onKeyUpdate(OMXKeypadEvent e)
 		if (midiSettings.midiAUX)
 		{
 			midiSettings.midiAUX = false;
+			potBankAuxClearFlash();
 		}
 	}
 
@@ -906,6 +924,24 @@ void OmxModeDrum::updateLEDs()
 		{
 			strip.setPixelColor(25, colorConfig.arpHoldOff);
 			strip.setPixelColor(26, colorConfig.arpOff);
+		}
+
+		{
+			uint32_t fc;
+			bool lit;
+			if (potBankAuxPollFlash(&fc, &lit))
+			{
+				strip.setPixelColor(13, lit ? fc : LEDOFF);
+				strip.setPixelColor(14, lit ? fc : LEDOFF);
+			}
+			else
+			{
+				uint32_t c13;
+				uint32_t c14;
+				potBankAuxPreviewColors((uint8_t)potSettings.potbank, &c13, &c14);
+				strip.setPixelColor(13, c13);
+				strip.setPixelColor(14, c14);
+			}
 		}
 	}
 	else
