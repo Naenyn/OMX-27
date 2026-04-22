@@ -1401,6 +1401,26 @@ void OmxModeMidiKeyboard::inMidiNoteOff(byte channel, byte note, byte velocity)
 
 void OmxModeMidiKeyboard::inMidiControlChange(byte channel, byte control, byte value)
 {
+	if (control == midiSettings.transportCC[0])
+	{
+		// Stop is treated as a momentary event; clear play state on non-zero values.
+		if (value > 0)
+		{
+			midiSettings.transportToggle[1] = false;
+			omxLeds.setDirty();
+		}
+	}
+	else if (control == midiSettings.transportCC[1])
+	{
+		midiSettings.transportToggle[1] = value >= 64;
+		omxLeds.setDirty();
+	}
+	else if (control == midiSettings.transportCC[2])
+	{
+		midiSettings.transportToggle[2] = value >= 64;
+		omxLeds.setDirty();
+	}
+
 	auto activeMacro = getActiveMacro();
 
 	if (activeMacro != nullptr)
