@@ -3,6 +3,7 @@
 #include "../globals.h"
 #include "../consts/colors.h"
 #include "../utils/omx_util.h"
+#include "../utils/pot_bank_aux.h"
 #include "../utils/cvNote_util.h"
 #include "../hardware/omx_disp.h"
 #include "../hardware/omx_leds.h"
@@ -1094,6 +1095,7 @@ void OmxModeChords::onKeyUpdate(OMXKeypadEvent e)
 		{
 			auxDown_ = false;
 			midiSettings.midiAUX = false;
+			potBankAuxClearFlash();
 
 			// Forces all arps to work.
 			for (uint8_t i = 0; i < NUM_MIDIFX_GROUPS; i++)
@@ -1114,6 +1116,22 @@ void OmxModeChords::onKeyUpdate(OMXKeypadEvent e)
 			{
 				int amt = thisKey == 11 ? -1 : 1;
 				midiSettings.octave = constrain(midiSettings.octave + amt, -5, 4);
+			}
+			else if (thisKey == 13 || thisKey == 14)
+			{
+				const int n = NUM_CC_BANKS;
+				int b = potSettings.potbank;
+				if (thisKey == 13)
+				{
+					b = (b + n - 1) % n;
+				}
+				else
+				{
+					b = (b + 1) % n;
+				}
+				potSettings.potbank = b;
+				potBankAuxTriggerFlash((uint8_t)b);
+				MM::sendControlChange(90, potSettings.potbank, sysSettings.midiChannel);
 			}
 			else if (!mfxQuickEdit_ && (thisKey == 1 || thisKey == 2)) // Change Param selection
 			{
@@ -2229,6 +2247,24 @@ void OmxModeChords::updateLEDs()
 		{
 			strip.setPixelColor(25, colorConfig.arpHoldOff);
 			strip.setPixelColor(26, colorConfig.arpOff);
+		}
+
+		{
+			uint32_t fc;
+			bool lit;
+			if (potBankAuxPollFlash(&fc, &lit))
+			{
+				strip.setPixelColor(13, lit ? fc : LEDOFF);
+				strip.setPixelColor(14, lit ? fc : LEDOFF);
+			}
+			else
+			{
+				uint32_t c13;
+				uint32_t c14;
+				potBankAuxPreviewColors((uint8_t)potSettings.potbank, &c13, &c14);
+				strip.setPixelColor(13, c13);
+				strip.setPixelColor(14, c14);
+			}
 		}
 
 		return;

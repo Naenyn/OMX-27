@@ -7,6 +7,7 @@
 #include "../hardware/omx_disp.h"
 #include "../hardware/omx_leds.h"
 #include "../midi/midi.h"
+#include "../utils/pot_bank_aux.h"
 #include "../utils/music_scales.h"
 #include "../midi/noteoffs.h"
 #include "sequencer.h"
@@ -683,6 +684,22 @@ void OmxModeMidiKeyboard::onKeyUpdate(OMXKeypadEvent e)
 					int amt = thisKey == 11 ? -1 : 1;
 					midiSettings.octave = constrain(midiSettings.octave + amt, -5, 4);
 				}
+				else if (thisKey == 13 || thisKey == 14) // Pot bank (wrapped)
+				{
+					const int n = NUM_CC_BANKS;
+					int b = potSettings.potbank;
+					if (thisKey == 13)
+					{
+						b = (b + n - 1) % n;
+					}
+					else
+					{
+						b = (b + 1) % n;
+					}
+					potSettings.potbank = b;
+					potBankAuxTriggerFlash((uint8_t)b);
+					MM::sendControlChange(90, potSettings.potbank, sysSettings.midiChannel);
+				}
 				else if (!mfxQuickEdit_ && (thisKey == 1 || thisKey == 2)) // Change Param selection
 				{
 					if (thisKey == 1)
@@ -808,12 +825,15 @@ void OmxModeMidiKeyboard::onKeyUpdate(OMXKeypadEvent e)
 		{
 			midiSettings.midiAUX = false;
 		}
+		potBankAuxClearFlash();
 		// turn off leds
 		strip.setPixelColor(0, LEDOFF);
 		strip.setPixelColor(1, LEDOFF);
 		strip.setPixelColor(2, LEDOFF);
 		strip.setPixelColor(11, LEDOFF);
 		strip.setPixelColor(12, LEDOFF);
+		strip.setPixelColor(13, LEDOFF);
+		strip.setPixelColor(14, LEDOFF);
 	}
 
 	omxLeds.setDirty();
@@ -1114,6 +1134,24 @@ void OmxModeMidiKeyboard::updateLEDs()
 		{
 			strip.setPixelColor(25, colorConfig.arpHoldOff);
 			strip.setPixelColor(26, colorConfig.arpOff);
+		}
+
+		{
+			uint32_t fc;
+			bool lit;
+			if (potBankAuxPollFlash(&fc, &lit))
+			{
+				strip.setPixelColor(13, lit ? fc : LEDOFF);
+				strip.setPixelColor(14, lit ? fc : LEDOFF);
+			}
+			else
+			{
+				uint32_t c13;
+				uint32_t c14;
+				potBankAuxPreviewColors((uint8_t)potSettings.potbank, &c13, &c14);
+				strip.setPixelColor(13, c13);
+				strip.setPixelColor(14, c14);
+			}
 		}
 
 		// strip.setPixelColor(10, color3); // MidiFX key
