@@ -182,6 +182,13 @@ struct MidiConfig
 	// AUX transport (keys 16–18): configurable CCs; Stop = momentary, Play/Rec = toggles (879eccc semantics).
 	uint8_t transportCC[3] = {102, 103, 104};
 	bool transportToggle[3] = {false, false, false};
+
+	// MIDI mode AUX controls in Keys mode.
+	uint8_t metronomeToggleCC = 105; // key 15 toggle (0/127)
+	uint8_t countInCC = 106;         // key 4 cycle (0/1/2/4)
+	uint8_t metronomePulseCC = 107; // inbound DAW metronome pulse (0-127 brightness)
+	uint8_t metronomePulseHostCC = 108; // key 3: host sends metronome pulses to OMX (0/127)
+	uint16_t metronomeColorHue = 10922; // default yellow in NeoPixel HSV space
 };
 
 extern MidiConfig midiSettings;
